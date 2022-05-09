@@ -1,5 +1,4 @@
 import asyncio
-import telethon
 import configparser
 
 import requests
@@ -37,13 +36,46 @@ def get_channel_id(username):  # Возвращает id канала по ни�
     return int(channel_id)
 
 
-async def send_post(channel_id, post="Hello, world!"):  # Отправка поста (html вкл.)
+async def send_text_post(channel_id, post="Hello, world!"):  # Отправка поста (html вкл.)
     bot_token = get_bot_token()
     bot = Bot(token=bot_token)
 
     await bot.send_message(channel_id, post, parse_mode=types.ParseMode.HTML)
 
     await bot.close()
+
+
+async def send_media_post(channel_id, text="Hello, world", files=None):  # files = [только фото и видео в формате mp4]
+    if files is None:
+        files = ["photo.png", "video.mp4"]
+
+    bot_token = get_bot_token()
+    bot = Bot(token=bot_token)
+
+    group = types.MediaGroup()
+    inputs = []
+    i = 0
+    for file in files:
+        if file.split(".")[-1] == "mp4":
+            if i == 0:
+                inputs.append(types.InputMedia(type="video", media=open(f"media/{file}", "rb"), caption=text))
+            else:
+                inputs.append(types.InputMedia(type="video", media=open(f"media/{file}", "rb")))
+            i += 1
+        else:
+            try:
+                if i == 0:
+                    inputs.append(types.InputMedia(type="photo", media=open(f"media/{file}", "rb"), caption=text))
+                else:
+                    inputs.append(types.InputMedia(type="photo", media=open(f"media/{file}", "rb")))
+                i += 1
+            except Exception as e:
+                print(e)
+
+    for inp in inputs:
+        group.attach_many(inp)
+
+    await bot.send_media_group(channel_id, media=group)
 
 
 async def check_rights(channel_id):  # Проверка на права администратора
@@ -63,7 +95,8 @@ async def check_rights(channel_id):  # Проверка на права адми
 
 
 '''          #Example
-    id = get_channel_id("justPeter3")
+    id = get_channel_id("channel")
     if asyncio.get_event_loop().run_until_complete(check_rights(id)):
         asyncio.get_event_loop().run_until_complete(send_post(channel_id=id, post="New post"))
+        # asyncio.get_event_loop().run_until_complete(send_media_post(channel_id=id, text="New post", files=["photo.png", "video.mp4"]))
 '''
